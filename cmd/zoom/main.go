@@ -18,8 +18,6 @@ func main() {
 	l := log.New(os.Stdout, "zoom: ", log.LstdFlags)
 	flag.Parse()
 
-	s := start()
-
 	// We need to send the all of the requests into the channel so that our doers can execute them
 	reqs := make(chan *http.Request)
 	go func() {
@@ -33,8 +31,10 @@ func main() {
 		close(reqs)
 	}()
 
+	// Create the specified amount of doers for the load test
 	var wg sync.WaitGroup
 	wg.Add(*concurrency)
+	s := start()
 	for i :=0; i < *concurrency; i++ {
 		go func() {
 			defer wg.Done()
@@ -42,9 +42,11 @@ func main() {
 		}()
 	}
 
+	// Wait for all of the doers to finish processing the requests
 	wg.Wait()
-
 	s.stop()
+
+	// Display the results
 	l.Println("---------- finished load test ----------")
 	s.results(l)
 }
