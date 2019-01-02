@@ -26,6 +26,7 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
+			req.Header.Set("User-Agent", "zoom")
 			reqs <- req
 		}
 		close(reqs)
@@ -41,6 +42,8 @@ func main() {
 			do(s, reqs)
 		}()
 	}
+
+	l.Println("---------- starting load test ----------")
 
 	// Wait for all of the doers to finish processing the requests
 	wg.Wait()
