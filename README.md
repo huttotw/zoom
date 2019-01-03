@@ -20,6 +20,7 @@ This will send 10,000 `POST` requests, 10 at a time, to `http://localhost:8080` 
 | concurrent      | the number of requests to make at one time                       | yes      |
 | method          | the HTTP method used to send the request                         | yes      |
 | url             | the URL to send the request to                                   | yes      |
+| h               | a header to send with each request, multiple allowed             | no       |
 | template        | the Go template string that you want to use to form each request | one of template or template-file |
 | template-file   | the file that contains your template to form each reqeust        | one of template or template-file |
 
