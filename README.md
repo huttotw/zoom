@@ -14,13 +14,26 @@ This will send 10,000 `POST` requests, 10 at a time, to `http://localhost:8080` 
 ```
 
 ## Flags
-| flag       | definition                                                       | required |
-|------------|------------------------------------------------------------------|----------|
-| n          | the number of requests you want to send                          | yes      |
-| concurrent | the number of requests to make at one time                       | yes      |
-| method     | the HTTP method used to send the request                         | yes      |
-| url        | the URL to send the request to                                   | yes      |
-| template   | the Go template string that you want to use to form each request | yes      |
+| flag            | definition                                                       | required |
+|-----------------|------------------------------------------------------------------|----------|
+| n               | the number of requests you want to send, omit for infinite       | no       |
+| concurrent      | the number of requests to make at one time                       | yes      |
+| method          | the HTTP method used to send the request                         | yes      |
+| url             | the URL to send the request to                                   | yes      |
+| template        | the Go template string that you want to use to form each request | one of template or template-file |
+| template-file   | the file that contains your template to form each reqeust        | one of template or template-file |
+
+## Available Functions
+| function   | description                                                                   |
+|------------|-------------------------------------------------------------------------------|
+| `email`    | a random email address                                                        |
+| `enum`     | randomly selects one of the arguments given                                   |
+| `intn`     | choose a random number between 0 and the given argument                       |
+| `ip`       | a random ip address                                                           |
+| `ksuid`    | a ksuid from [github.com/segmentio/ksuid](https://github.com/segmentio/ksuid) |
+| `string`   | a random string                                                               |
+| `url`      | a random url                                                                  |
+| `time`     | the current time                                                              |
 
 ## Adding new template functions
 Since we use `text/template` to form each request, adding new functions to be available at execution time is as simple as adding to the function map in `cmd/zoom/templates.go`. Please see the official documentation for more detail: https://golang.org/pkg/text/template/#FuncMap.
