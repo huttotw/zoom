@@ -65,6 +65,9 @@ func (l latencies) Swap(i, j int) {
 
 
 func (s *stats) results(l *log.Logger) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
 	if s.requests == 0 {
 		l.Println("no results")
 		return

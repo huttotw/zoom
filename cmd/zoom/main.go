@@ -3,24 +3,40 @@ package main
 import (
 	"bytes"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"text/template"
 	"time"
 )
 
-var method = flag.String("method", "", "the http method to use when making the request")
-var n = flag.Int("n", 0, "the total number of requests you want to make")
-var concurrency = flag.Int("concurrency", 1, "the number of requests you want to have in flight at any given time")
-var url = flag.String("url", "", "the url that you want to send the request to")
-var temp = flag.String("template", "", "the template that will be used to produce the body of a request")
-var tempFile = flag.String("template-file", "", "the template file that will be used to produce the body of a request")
+type headerList []string
+
+func (h *headerList) String() string {
+	return fmt.Sprintf("%x", *h)
+}
+
+func (h *headerList) Set(value string) error {
+	*h = append(*h, value)
+	return nil
+}
 
 func main() {
 	l := log.New(os.Stdout, "zoom: ", log.LstdFlags)
+
+	// Parse our incoming flags
+	concurrency := flag.Int("concurrency", 1, "the number of requests you want to have in flight at any given time")
+	var headers headerList
+	flag.Var(&headers, "h", "a header you want to include on the http request")
+	method := flag.String("method", "", "the http method to use when making the request")
+	n := flag.Int("n", 0, "the total number of requests you want to make")
+	temp := flag.String("template", "", "the template that will be used to produce the body of a request")
+	tempFile := flag.String("template-file", "", "the template file that will be used to produce the body of a request")
+	url := flag.String("url", "", "the url that you want to send the request to")
 	flag.Parse()
 
 	// Parse the incoming template so that we can execute before each request
@@ -39,6 +55,17 @@ func main() {
 		}
 	}
 
+	// Compile our list of headers to be added to each request
+	h := make(http.Header, 0)
+	h.Add("User-Agent", "zoom")
+	for _, v := range headers {
+		parts := strings.Split(v, ": ")
+		if len(parts) != 2 {
+			panic("invalid header")
+		}
+
+		h.Add(parts[0], parts[1])
+	}
 
 	// We need to send the all of the requests into the channel so that our doers can execute them
 	reqs := make(chan *http.Request)
@@ -55,7 +82,7 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
-			req.Header.Set("User-Agent", "zoom")
+			req.Header = h
 			reqs <- req
 			i++
 		}
