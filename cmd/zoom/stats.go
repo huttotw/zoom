@@ -2,10 +2,9 @@ package main
 
 import (
 	"log"
-	"net/http"
+	"sort"
 	"sync"
 	"time"
-	"sort"
 )
 
 
@@ -29,6 +28,8 @@ func start() *stats {
 }
 
 func (s *stats) incrementRequests(n int) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	s.requests++
 }
 
@@ -44,78 +45,7 @@ func (s *stats) recordStatus(status int) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	switch status {
-	case
-		http.StatusContinue,
-		http.StatusSwitchingProtocols,
-		http.StatusProcessing:
-			s.statuses[100]++
-	case
-		http.StatusOK,
-		http.StatusCreated,
-		http.StatusAccepted,
-		http.StatusNonAuthoritativeInfo,
-		http.StatusNoContent,
-		http.StatusResetContent,
-		http.StatusPartialContent,
-		http.StatusMultiStatus,
-		http.StatusAlreadyReported,
-		http.StatusIMUsed:
-			s.statuses[200]++
-	case
-		http.StatusMultipleChoices,
-		http.StatusMovedPermanently,
-		http.StatusFound,
-		http.StatusSeeOther,
-		http.StatusNotModified,
-		http.StatusUseProxy ,
-		http.StatusTemporaryRedirect,
-		http.StatusPermanentRedirect:
-			s.statuses[300]++
-	case
-		http.StatusBadRequest,
-		http.StatusUnauthorized,
-		http.StatusPaymentRequired,
-		http.StatusForbidden,
-		http.StatusNotFound,
-		http.StatusMethodNotAllowed,
-		http.StatusNotAcceptable,
-		http.StatusProxyAuthRequired,
-		http.StatusRequestTimeout,
-		http.StatusConflict,
-		http.StatusGone,
-		http.StatusLengthRequired,
-		http.StatusPreconditionFailed,
-		http.StatusRequestEntityTooLarge,
-		http.StatusRequestURITooLong,
-		http.StatusUnsupportedMediaType,
-		http.StatusRequestedRangeNotSatisfiable,
-		http.StatusExpectationFailed,
-		http.StatusTeapot,
-		http.StatusMisdirectedRequest,
-		http.StatusUnprocessableEntity,
-		http.StatusLocked,
-		http.StatusFailedDependency,
-		http.StatusUpgradeRequired,
-		http.StatusPreconditionRequired,
-		http.StatusTooManyRequests,
-		http.StatusRequestHeaderFieldsTooLarge,
-		http.StatusUnavailableForLegalReasons:
-			s.statuses[400]++
-	case
-		http.StatusInternalServerError,
-		http.StatusNotImplemented,
-		http.StatusBadGateway,
-		http.StatusServiceUnavailable,
-		http.StatusGatewayTimeout,
-		http.StatusHTTPVersionNotSupported,
-		http.StatusVariantAlsoNegotiates,
-		http.StatusInsufficientStorage,
-		http.StatusLoopDetected,
-		http.StatusNotExtended,
-		http.StatusNetworkAuthenticationRequired:
-			s.statuses[500]++
-	}
+	s.statuses[status]++
 }
 
 type latencies []time.Duration
@@ -140,8 +70,14 @@ func (s *stats) results(l *log.Logger) {
 		return
 	}
 
+	end := s.end
+	if s.end.IsZero() {
+		end = time.Now()
+	}
+
 	sort.Sort(s.latencies)
-	dur := s.end.Sub(s.begin).String()
+	dur := end.Sub(s.begin).String()
+	reqPerS := float64(s.requests) / end.Sub(s.begin).Seconds()
 	max := s.latencies[len(s.latencies) - 1].String()
 	min := s.latencies[0].String()
 	medIndex := len(s.latencies) / 2
@@ -156,16 +92,15 @@ func (s *stats) results(l *log.Logger) {
 
 	l.Printf("total requests:\t%d", s.requests)
 	l.Printf("duration:\t\t%s", dur)
+	l.Printf("reqs/s:\t\t%f", reqPerS)
 	l.Printf("max latency:\t\t%s", max)
 	l.Printf("min latency:\t\t%s", min)
 	l.Printf("median latency:\t%s", med)
 	l.Printf("p99 latency:\t\t%s", p99)
 	l.Printf("p95 latency:\t\t%s", p95)
 	l.Printf("p90 latency:\t\t%s", p90)
-	l.Printf("1xx:\t\t\t%d", s.statuses[100])
-	l.Printf("2xx:\t\t\t%d", s.statuses[200])
-	l.Printf("3xx:\t\t\t%d", s.statuses[300])
-	l.Printf("4xx:\t\t\t%d", s.statuses[400])
-	l.Printf("5xx:\t\t\t%d", s.statuses[500])
+	for k, v := range s.statuses {
+		l.Printf("status %d:\t\t%d", k, v)
+	}
 	l.Printf("error rate:\t\t%f", errorRate)
 }
