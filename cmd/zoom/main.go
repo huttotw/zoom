@@ -94,7 +94,7 @@ func main() {
 	s.results(l)
 
 	// Show the results every 15 seconds
-	tick := time.Tick(time.Second * 15)
+	tick := time.Tick(time.Second * 5)
 	go func() {
 		for {
 			select {
@@ -105,17 +105,26 @@ func main() {
 		}
 	}()
 
+	// Listen for errors, and increment the error count
+	errs := make(chan error)
+	go func() {
+		for {
+			select {
+			case err := <-errs:
+				l.Println(err)
+			}
+		}
+	}()
+
 	// Create the specified amount of doers for the load test
 	var wg sync.WaitGroup
 	wg.Add(*concurrency)
 	for i :=0; i < *concurrency; i++ {
-		go func() {
+		go func(s *stats) {
 			defer wg.Done()
-			do(s, reqs)
-		}()
+			do(s, reqs, errs)
+		}(s)
 	}
-
-
 
 	// Wait for all of the doers to finish processing the requests
 	wg.Wait()
